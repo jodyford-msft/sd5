@@ -1,0 +1,28 @@
+trigger:
+- main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '3.x'
+    addToPath: true
+
+- script: |
+    python -m pip install --upgrade pip
+    pip install -r requirements.txt
+  displayName: 'Install dependencies'
+
+- script: |
+    docker build -t sd5registry.azurecr.io/my-python-app:$(Build.BuildId) .
+    echo $(DOCKER_PASSWORD) | docker login sd5registry.azurecr.io -u $(DOCKER_USERNAME) --password-stdin
+    docker push sd5registry.azurecr.io/my-python-app:$(Build.BuildId)
+  displayName: 'Build and push Docker image'
+
+- task: AzureWebAppContainer@1
+  inputs:
+    azureSubscription: 'eb91d6eb-c7b9-4cc0-a70c-9a0de0349795'
+    appName: 'myPythonApp'
+    containers: 'sd5registry.azurecr.io/my-python-app:$(Build.BuildId)'
